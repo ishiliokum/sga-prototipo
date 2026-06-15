@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SGA · Sistema de Gestión Aduanera — Prototipo funcional</title>
+<style>
+  :root{
+    --azul:#0a2a4e;        /* navy institucional */
+    --azul-2:#11487f;      /* azul medio */
+    --azul-claro:#2f7dd1;  /* acento interactivo */
+    --celeste:#e7f0fb;
+    --rojo:#c0392b;        /* alertas */
+    --verde:#1e8a5b;       /* éxito / aprobado */
+    --ambar:#b7791f;       /* pendiente */
+    --tinta:#13283d;
+    --gris:#5b6b7b;
+    --linea:#d8e1ea;
+    --fondo:#f4f7fb;
+    --blanco:#ffffff;
+    --radio:10px;
+    --sombra:0 1px 2px rgba(13,40,61,.06),0 8px 24px rgba(13,40,61,.06);
+    --mono:'Consolas','SF Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--fondo);color:var(--tinta);font-size:14px;line-height:1.5}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:14px}
+  .oculto{display:none!important}
+
+  /* ---------- LOGIN ---------- */
+  #login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--azul) 0%,var(--azul-2) 100%);z-index:50}
+  .login-card{background:var(--blanco);width:380px;border-radius:14px;padding:36px 34px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .brand .mark{width:42px;height:42px;border-radius:9px;background:var(--azul);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;letter-spacing:.5px}
+  .brand h1{font-size:20px;color:var(--azul);letter-spacing:.3px}
+  .brand span{font-size:11px;color:var(--gris);display:block;font-weight:400}
+  .login-card h2{font-size:15px;margin:22px 0 4px}
+  .login-card p.sub{font-size:12.5px;color:var(--gris);margin-bottom:18px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--gris);margin:12px 0 5px}
+  .field{width:100%;padding:10px 12px;border:1.5px solid var(--linea);border-radius:8px;outline:none;transition:border .15s}
+  .field:focus{border-color:var(--azul-claro)}
+  .btn{border:none;border-radius:8px;padding:11px 16px;font-weight:600;font-size:14px}
+  .btn-primary{background:var(--azul);color:#fff;width:100%;margin-top:18px}
+  .btn-primary:hover{background:var(--azul-2)}
+  .hint{font-size:11px;color:var(--gris);margin-top:14px;text-align:center;line-height:1.6}
+  .hint code{background:var(--celeste);padding:1px 5px;border-radius:4px;color:var(--azul-2);font-family:var(--mono)}
+  .mtls{display:flex;align-items:center;gap:6px;justify-content:center;margin-top:16px;font-size:11px;color:var(--verde);font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--verde);box-shadow:0 0 0 3px rgba(30,138,91,.18)}
+
+  /* ---------- LAYOUT ---------- */
+  #app{display:grid;grid-template-columns:248px 1fr;grid-template-rows:58px 1fr;min-height:100vh}
+  aside{grid-row:1/3;background:var(--azul);color:#cdd9e6;display:flex;flex-direction:column}
+  aside .top{padding:16px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+  aside .brand h1{color:#fff;font-size:16px}
+  aside .brand .mark{width:34px;height:34px;font-size:15px;background:rgba(255,255,255,.12)}
+  nav{padding:10px 10px;flex:1;overflow:auto}
+  .nav-group{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:#7f97b1;margin:14px 12px 6px}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:8px;color:#cdd9e6;font-size:13.5px;font-weight:500;cursor:pointer;transition:background .12s}
+  .nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+  .nav-item.active{background:var(--azul-claro);color:#fff;font-weight:600}
+  .nav-item .ic{width:18px;text-align:center;font-size:15px}
+  aside .foot{padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:#8aa1bb}
+
+  header{grid-column:2;display:flex;align-items:center;justify-content:space-between;padding:0 26px;background:var(--blanco);border-bottom:1px solid var(--linea)}
+  header .crumb{font-size:13px;color:var(--gris)}
+  header .crumb b{color:var(--tinta)}
+  .header-right{display:flex;align-items:center;gap:18px}
+  .pill{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--verde);background:rgba(30,138,91,.1);padding:5px 10px;border-radius:20px}
+  .user-chip{display:flex;align-items:center;gap:9px;font-size:13px}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--azul-claro);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+  .user-chip .role{font-size:11px;color:var(--gris)}
+  .logout{background:none;border:1px solid var(--linea);border-radius:7px;padding:6px 11px;font-size:12px;color:var(--gris)}
+  .logout:hover{border-color:var(--rojo);color:var(--rojo)}
+
+  main{grid-column:2;padding:26px;overflow:auto}
+  .page-title{font-size:22px;font-weight:700;margin-bottom:3px}
+  .page-sub{color:var(--gris);font-size:13.5px;margin-bottom:22px}
+
+  /* ---------- COMPONENTES ---------- */
+  .grid{display:grid;gap:16px}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--blanco);border:1px solid var(--linea);border-radius:var(--radio);padding:18px;box-shadow:var(--sombra)}
+  .kpi .lbl{font-size:12px;color:var(--gris);font-weight:600;display:flex;align-items:center;gap:7px}
+  .kpi .val{font-size:30px;font-weight:800;margin-top:8px;color:var(--azul)}
+  .kpi .delta{font-size:12px;margin-top:5px;font-weight:600}
+  .up{color:var(--verde)} .down{color:var(--rojo)}
+  .two-col{grid-template-columns:1.4fr 1fr}
+  .card h3{font-size:15px;margin-bottom:4px}
+  .card .desc{font-size:12.5px;color:var(--gris);margin-bottom:14px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gris);padding:9px 10px;border-bottom:2px solid var(--linea)}
+  td{padding:10px;border-bottom:1px solid var(--linea)}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--celeste)}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .t-ok{background:rgba(30,138,91,.12);color:var(--verde)}
+  .t-pend{background:rgba(183,121,31,.14);color:var(--ambar)}
+  .t-rej{background:rgba(192,57,43,.12);color:var(--rojo)}
+  .t-proc{background:var(--celeste);color:var(--azul-2)}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+  .form-grid .full{grid-column:1/3}
+  .err{color:var(--rojo);font-size:11.5px;margin-top:4px;display:none}
+  .field.invalid{border-color:var(--rojo);background:#fff6f5}
+  .field.valid{border-color:var(--verde)}
+  .help{font-size:11px;color:var(--gris);margin-top:4px}
+  .actions{display:flex;gap:10px;margin-top:8px}
+  .btn-ghost{background:var(--blanco);border:1.5px solid var(--linea);color:var(--gris)}
+  .btn-ghost:hover{border-color:var(--azul-claro);color:var(--azul-2)}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--tinta);color:#fff;padding:13px 18px;border-radius:9px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:.3s;z-index:60}
+  .toast.show{transform:translateY(0);opacity:1}
+  .toast.ok{background:var(--verde)} .toast.bad{background:var(--rojo)}
+
+  .bar-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .bar-row .name{width:130px;font-size:12.5px;color:var(--gris);font-weight:600}
+  .bar-track{flex:1;height:9px;background:var(--celeste);border-radius:6px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:6px;background:var(--azul-claro)}
+  .bar-row .pct{width:42px;text-align:right;font-size:12.5px;font-weight:700;color:var(--azul)}
+
+  .toolbar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+  .search{flex:1;min-width:200px;position:relative}
+  .search input{width:100%;padding:9px 12px 9px 34px;border:1.5px solid var(--linea);border-radius:8px;outline:none}
+  .search input:focus{border-color:var(--azul-claro)}
+  .search .mag{position:absolute;left:11px;top:9px;color:var(--gris)}
+  select.filter{padding:9px 12px;border:1.5px solid var(--linea);border-radius:8px;background:#fff;outline:none}
+
+  .quality-grid{grid-template-columns:repeat(4,1fr)}
+  .q-card{padding:14px;border-radius:9px;border:1px solid var(--linea);background:var(--blanco)}
+  .q-card .qt{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .q-card .qm{font-size:11.5px;color:var(--gris);margin-top:5px}
+  .q-card .score{font-size:20px;font-weight:800;color:var(--verde);margin-top:8px}
+
+  .badge-rf{font-family:var(--mono);font-size:11px;background:var(--azul);color:#fff;padding:2px 7px;border-radius:5px;font-weight:700}
+
+  footer.appfoot{grid-column:2;text-align:center;font-size:11px;color:var(--gris);padding:14px}
+  @media(max-width:880px){
+    #app{grid-template-columns:1fr;grid-template-rows:58px 1fr}
+    aside{display:none}
+    header,main,footer.appfoot{grid-column:1}
+    .kpis,.quality-grid{grid-template-columns:1fr 1fr}
+    .two-col,.form-grid{grid-template-columns:1fr}
+    .form-grid .full{grid-column:1}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="login-card">
+    <div class="brand">
+      <div class="mark">SGA</div>
+      <div><h1>Sistema de Gestión Aduanera<span>Servicio Nacional de Aduanas · Chile</span></h1></div>
+    </div>
+    <h2>Iniciar sesión</h2>
+    <p class="sub">Acceso por roles · Paso Fronterizo Los Libertadores</p>
+
+    <label>Usuario</label>
+    <input class="field" id="lg-user" placeholder="ej: vduran" autocomplete="off">
+    <label>Contraseña</label>
+    <input class="field" id="lg-pass" type="password" placeholder="••••••••">
+    <label>Perfil de acceso</label>
+    <select class="field" id="lg-role">
+      <option value="Funcionario Aduanero">Funcionario Aduanero</option>
+      <option value="Funcionario PDI">Funcionario PDI</option>
+      <option value="Funcionario SAG">Funcionario SAG</option>
+      <option value="Administrador">Administrador</option>
+      <option value="Ciudadano">Ciudadano (Pre-atención)</option>
+    </select>
+
+    <button class="btn btn-primary" onclick="login()">Ingresar</button>
+    <p class="hint">Prototipo de demostración. Use cualquier usuario y contraseña <code>demo123</code>.</p>
+    <div class="mtls"><span class="dot"></span> Conexión segura mTLS · OAuth 2.0 · TLS 1.3</div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="oculto">
+  <aside>
+    <div class="top">
+      <div class="brand">
+        <div class="mark">SGA</div>
+        <div><h1>SGA</h1><span style="font-size:10.5px;color:#8aa1bb">Gestión Aduanera</span></div>
+      </div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="foot">v2.4.0 · Paso Los Libertadores<br>© SNA Chile 2024</div>
+  </aside>
+
+  <header>
+    <div class="crumb">SGA / <b id="crumb">Panel de control</b></div>
+    <div class="header-right">
+      <div class="pill"><span class="dot"></span> mTLS activo</div>
+      <div class="user-chip">
+        <div class="avatar" id="avatar">VD</div>
+        <div><div id="uname" style="font-weight:600">Usuario</div><div class="role" id="urole">Rol</div></div>
+      </div>
+      <button class="logout" onclick="logout()">Salir</button>
+    </div>
+  </header>
+
+  <main id="view"></main>
+  <footer class="appfoot">SGA · Prototipo funcional — Evaluación Parcial N°3 · Ingeniería de Software RQY1102 · DUOC UC 2024</footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== DATOS DE EJEMPLO (mock) ===================== */
+const DB = {
+  menores:[
+    {id:'AM-1042', menor:'Sofía Rojas Pérez', rut:'25.114.220-3', tutor:'Carla Pérez Díaz', destino:'Mendoza, AR', estado:'Aprobado'},
+    {id:'AM-1043', menor:'Tomás Aguilar Soto', rut:'24.998.115-K', tutor:'Luis Aguilar', destino:'Mendoza, AR', estado:'Pendiente'},
+    {id:'AM-1044', menor:'Emilia Vega Lazo', rut:'26.001.554-1', tutor:'Andrea Lazo', destino:'San Juan, AR', estado:'Rechazado'},
+    {id:'AM-1045', menor:'Benjamín Soto Mora', rut:'25.770.318-8', tutor:'Pedro Soto', destino:'Mendoza, AR', estado:'Aprobado'},
+  ],
+  vehiculos:[
+    {id:'VM-3301', patente:'JKLP-22', tipo:'Automóvil', cond:'Vicente Durán', vence:'2024-12-30', estado:'Aprobado'},
+    {id:'VM-3302', patente:'RTYU-78', tipo:'Camioneta', cond:'Gabriel Pérez', vence:'2024-11-15', estado:'En proceso'},
+    {id:'VM-3303', patente:'BNML-09', tipo:'Bus', cond:'Transp. Andesmar', vence:'2025-01-20', estado:'Aprobado'},
+  ],
+  controles:[
+    {id:'CT-9001', tipo:'PDI', sujeto:'M. Marchant', resultado:'Sin alertas', estado:'Aprobado'},
+    {id:'CT-9002', tipo:'SAG', sujeto:'Carga: 12kg fruta', resultado:'Decomiso parcial', estado:'Rechazado'},
+    {id:'CT-9003', tipo:'PDI', sujeto:'G. Cárdenas', resultado:'Verificación OK', estado:'Aprobado'},
+    {id:'CT-9004', tipo:'SAG', sujeto:'Mascota canina', resultado:'Certif. vigente', estado:'Aprobado'},
+  ],
+};
+
+const ROLES = {
+  'Funcionario Aduanero':['dashboard','menores','vehiculos','reportes'],
+  'Funcionario PDI':['dashboard','control'],
+  'Funcionario SAG':['dashboard','control'],
+  'Administrador':['dashboard','menores','vehiculos','control','reportes','usuarios','calidad'],
+  'Ciudadano':['preatencion'],
+};
+
+const MENU = {
+  dashboard:{ic:'▦',label:'Panel de control'},
+  menores:{ic:'⚲',label:'Documentos de menores'},
+  vehiculos:{ic:'⛟',label:'Vehículos motorizados'},
+  control:{ic:'◎',label:'Control PDI / SAG'},
+  preatencion:{ic:'✓',label:'Pre-atención digital'},
+  reportes:{ic:'▤',label:'Reportes y estadísticas'},
+  usuarios:{ic:'⚇',label:'Gestión de usuarios'},
+  calidad:{ic:'★',label:'Panel de calidad (RNF)'},
+};
+
+let SESSION = null;
+
+/* ===================== AUTENTICACIÓN ===================== */
+function login(){
+  const u=document.getElementById('lg-user').value.trim();
+  const p=document.getElementById('lg-pass').value;
+  const r=document.getElementById('lg-role').value;
+  if(!u){toast('Ingrese un nombre de usuario','bad');return;}
+  if(p!=='demo123'){toast('Contraseña incorrecta (use demo123)','bad');return;}
+  SESSION={user:u,role:r};
+  document.getElementById('login').classList.add('oculto');
+  document.getElementById('app').classList.remove('oculto');
+  const initials=u.slice(0,2).toUpperCase();
+  document.getElementById('avatar').textContent=initials;
+  document.getElementById('uname').textContent=u;
+  document.getElementById('urole').textContent=r;
+  buildNav();
+  const first=ROLES[r][0];
+  go(first);
+  toast('Sesión iniciada — token OAuth2 emitido','ok');
+}
+function logout(){
+  SESSION=null;
+  document.getElementById('app').classList.add('oculto');
+  document.getElementById('login').classList.remove('oculto');
+  document.getElementById('lg-user').value='';document.getElementById('lg-pass').value='';
+}
+
+/* ===================== NAVEGACIÓN ===================== */
+function buildNav(){
+  const allowed=ROLES[SESSION.role];
+  let html='<div class="nav-group">Módulos</div>';
+  allowed.forEach(k=>{
+    html+=`<div class="nav-item" data-k="${k}" onclick="go('${k}')"><span class="ic">${MENU[k].ic}</span>${MENU[k].label}</div>`;
+  });
+  document.getElementById('nav').innerHTML=html;
+}
+function go(k){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.k===k));
+  document.getElementById('crumb').textContent=MENU[k].label;
+  document.getElementById('view').innerHTML=VIEWS[k]();
+  if(k==='menores')bindMenorForm();
+  if(k==='vehiculos')bindVehForm();
+  if(k==='preatencion')bindPreForm();
+  if(k==='dashboard')drawBars();
+}
+
+/* ===================== VISTAS ===================== */
+const VIEWS={
+dashboard:()=>`
+  <div class="page-title">Panel de control</div>
+  <div class="page-sub">Estado operativo en tiempo real · Paso Los Libertadores</div>
+  <div class="grid kpis">
+    <div class="card kpi"><div class="lbl">⏱ Tiempo de espera</div><div class="val">28 min</div><div class="delta up">▼ desde 20 h (meta &lt;30 min)</div></div>
+    <div class="card kpi"><div class="lbl">▣ Cruces hoy</div><div class="val">3.214</div><div class="delta up">▲ 12% vs ayer</div></div>
+    <div class="card kpi"><div class="lbl">◷ Aforo actual</div><div class="val">74%</div><div class="delta down">▲ temporada alta</div></div>
+    <div class="card kpi"><div class="lbl">⚲ Pre-atención</div><div class="val">61%</div><div class="delta up">▲ adopción digital</div></div>
+  </div>
+  <div class="grid two-col" style="margin-top:16px">
+    <div class="card">
+      <h3>Flujo por módulo (últimas 24 h)</h3>
+      <p class="desc">Trámites procesados por el sistema</p>
+      <div id="bars"></div>
+    </div>
+    <div class="card">
+      <h3>Integraciones externas</h3>
+      <p class="desc">Estado de servicios conectados (mTLS)</p>
+      <table>
+        <tr><td>PDI · REST/JSON</td><td style="text-align:right"><span class="tag t-ok">En línea</span></td></tr>
+        <tr><td>SAG · REST/JSON</td><td style="text-align:right"><span class="tag t-ok">En línea</span></td></tr>
+        <tr><td>Aduana Argentina · SOAP/XML</td><td style="text-align:right"><span class="tag t-ok">En línea</span></td></tr>
+        <tr><td>Registro Civil · REST/JSON</td><td style="text-align:right"><span class="tag t-pend">Latencia alta</span></td></tr>
+      </table>
+    </div>
+  </div>`,
+
+menores:()=>`
+  <div class="page-title">Gestión de documentos de menores</div>
+  <div class="page-sub"><span class="badge-rf">RF01</span> Digitalización de autorizaciones notariales para menores de edad</div>
+  <div class="grid two-col">
+    <div class="card">
+      <h3>Nueva autorización</h3>
+      <p class="desc">Complete los datos. Validación en tiempo real (RNF · Usabilidad).</p>
+      <div class="form-grid">
+        <div><label>Nombre del menor</label><input class="field" id="m-nombre"><div class="err" id="e-m-nombre">Campo obligatorio</div></div>
+        <div><label>RUT del menor</label><input class="field" id="m-rut" placeholder="12.345.678-9"><div class="err" id="e-m-rut">RUT inválido (revise el dígito verificador)</div></div>
+        <div><label>Tutor / autorizante</label><input class="field" id="m-tutor"><div class="err" id="e-m-tutor">Campo obligatorio</div></div>
+        <div><label>Destino</label><input class="field" id="m-destino" placeholder="Mendoza, AR"><div class="err" id="e-m-destino">Campo obligatorio</div></div>
+        <div class="full"><label>N° escritura notarial</label><input class="field" id="m-not" placeholder="Ej: 2024-NOT-00481"><div class="help">Se valida contra Registro Civil al guardar.</div></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" onclick="saveMenor()">Registrar autorización</button>
+      <button class="btn btn-ghost" onclick="go('menores')">Limpiar</button></div>
+    </div>
+    <div class="card">
+      <h3>Autorizaciones registradas</h3>
+      <p class="desc"><span id="m-count">${DB.menores.length}</span> registros</p>
+      <table><thead><tr><th>ID</th><th>Menor</th><th>Destino</th><th>Estado</th></tr></thead>
+      <tbody id="m-tbody"></tbody></table>
+    </div>
+  </div>`,
+
+vehiculos:()=>`
+  <div class="page-title">Vehículos motorizados</div>
+  <div class="page-sub"><span class="badge-rf">RF02</span> Admisión temporal de vehículos Chile–Argentina</div>
+  <div class="grid two-col">
+    <div class="card">
+      <h3>Nuevo formulario de admisión</h3>
+      <p class="desc">Validación de patente en formato chileno (AABB-99 / AA-9999).</p>
+      <div class="form-grid">
+        <div><label>Patente</label><input class="field" id="v-pat" placeholder="JKLP-22"><div class="err" id="e-v-pat">Formato de patente inválido</div></div>
+        <div><label>Tipo</label><select class="field" id="v-tipo"><option>Automóvil</option><option>Camioneta</option><option>Bus</option><option>Motocicleta</option></select></div>
+        <div><label>Conductor</label><input class="field" id="v-cond"><div class="err" id="e-v-cond">Campo obligatorio</div></div>
+        <div><label>Vence permiso</label><input class="field" type="date" id="v-vence"><div class="err" id="e-v-vence">Fecha obligatoria</div></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" onclick="saveVeh()">Registrar admisión</button>
+      <button class="btn btn-ghost" onclick="go('vehiculos')">Limpiar</button></div>
+    </div>
+    <div class="card">
+      <h3>Admisiones temporales</h3>
+      <p class="desc"><span id="v-count">${DB.vehiculos.length}</span> registros</p>
+      <table><thead><tr><th>Patente</th><th>Tipo</th><th>Conductor</th><th>Estado</th></tr></thead>
+      <tbody id="v-tbody"></tbody></table>
+    </div>
+  </div>`,
+
+control:()=>`
+  <div class="page-title">Control PDI / SAG</div>
+  <div class="page-sub"><span class="badge-rf">RF03</span> Integración en tiempo real con sistemas de PDI y SAG</div>
+  <div class="card">
+    <div class="toolbar">
+      <div class="search"><span class="mag">⌕</span><input id="c-search" placeholder="Buscar por ID, sujeto o resultado…" oninput="filterControl()"></div>
+      <select class="filter" id="c-filter" onchange="filterControl()">
+        <option value="">Todos los tipos</option><option>PDI</option><option>SAG</option>
+      </select>
+    </div>
+    <table><thead><tr><th>ID</th><th>Tipo</th><th>Sujeto / carga</th><th>Resultado</th><th>Estado</th></tr></thead>
+    <tbody id="c-tbody"></tbody></table>
+  </div>`,
+
+preatencion:()=>`
+  <div class="page-title">Pre-atención digital</div>
+  <div class="page-sub"><span class="badge-rf">RF04</span> Complete sus trámites antes de llegar al paso fronterizo</div>
+  <div class="card" style="max-width:640px">
+    <h3>Declaración anticipada de cruce</h3>
+    <p class="desc">Reduzca su tiempo en ventanilla. Recibirá un turno y carril asignado.</p>
+    <div class="form-grid">
+      <div><label>Nombre completo</label><input class="field" id="p-nombre"><div class="err" id="e-p-nombre">Campo obligatorio</div></div>
+      <div><label>RUT / Pasaporte</label><input class="field" id="p-doc" placeholder="11.111.111-1 o pasaporte"><div class="err" id="e-p-doc">Ingrese un RUT válido o un N° de pasaporte</div></div>
+      <div><label>Correo de contacto</label><input class="field" id="p-email" placeholder="nombre@correo.cl"><div class="err" id="e-p-email">Correo con formato inválido</div></div>
+      <div><label>Fecha de cruce</label><input class="field" type="date" id="p-fecha"><div class="err" id="e-p-fecha">La fecha no puede ser anterior a hoy</div></div>
+      <div><label>N° de acompañantes (0 a 10)</label><input class="field" type="number" id="p-acomp" min="0" max="10" value="0"><div class="err" id="e-p-acomp">Debe estar entre 0 y 10</div></div>
+      <div><label>Satisfacción con el trámite (1 a 5)</label><input class="field" type="number" id="p-sat" min="1" max="5" value="5"><div class="err" id="e-p-sat">Debe estar entre 1 y 5</div></div>
+      <div class="full"><label>¿Lleva alimentos, animales o plantas? (declaración SAG)</label>
+        <select class="field" id="p-sag"><option value="no">No</option><option value="si">Sí, declaro</option></select></div>
+    </div>
+    <div class="actions"><button class="btn btn-primary" onclick="savePre()">Enviar declaración</button></div>
+    <div id="p-result"></div>
+  </div>`,
+
+reportes:()=>`
+  <div class="page-title">Reportes y estadísticas</div>
+  <div class="page-sub"><span class="badge-rf">RF05</span> Exportación de estadísticas en PDF y Excel</div>
+  <div class="grid two-col">
+    <div class="card">
+      <h3>Generar reporte</h3>
+      <div class="form-grid">
+        <div><label>Tipo de reporte</label><select class="field"><option>Cruces por día</option><option>Tiempos de espera</option><option>Decomisos SAG</option><option>Alertas PDI</option></select></div>
+        <div><label>Período</label><select class="field"><option>Últimos 7 días</option><option>Mes actual</option><option>Temporada alta</option></select></div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" onclick="toast('Reporte PDF generado (simulado)','ok')">▤ Exportar PDF</button>
+        <button class="btn btn-ghost" onclick="toast('Planilla Excel generada (simulado)','ok')">▦ Exportar Excel</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Resumen del período</h3>
+      <table>
+        <tr><td>Cruces totales</td><td style="text-align:right;font-weight:700">68.420</td></tr>
+        <tr><td>Tiempo promedio de espera</td><td style="text-align:right;font-weight:700">31 min</td></tr>
+        <tr><td>Decomisos SAG</td><td style="text-align:right;font-weight:700">142</td></tr>
+        <tr><td>Alertas PDI</td><td style="text-align:right;font-weight:700">7</td></tr>
+        <tr><td>Adopción pre-atención</td><td style="text-align:right;font-weight:700">61%</td></tr>
+      </table>
+    </div>
+  </div>`,
+
+usuarios:()=>`
+  <div class="page-title">Gestión de usuarios</div>
+  <div class="page-sub"><span class="badge-rf">RF06</span> Administración de roles y accesos con OAuth2</div>
+  <div class="card">
+    <table><thead><tr><th>Usuario</th><th>Rol</th><th>Autenticación</th><th>Estado</th></tr></thead>
+    <tbody>
+      <tr><td>vduran</td><td>Funcionario Aduanero</td><td>OAuth2 + mTLS</td><td><span class="tag t-ok">Activo</span></td></tr>
+      <tr><td>gperez</td><td>Administrador</td><td>OAuth2 + mTLS</td><td><span class="tag t-ok">Activo</span></td></tr>
+      <tr><td>gcardenas</td><td>Funcionario PDI</td><td>OAuth2 + mTLS</td><td><span class="tag t-ok">Activo</span></td></tr>
+      <tr><td>mmarchant</td><td>Funcionario SAG</td><td>OAuth2 + mTLS</td><td><span class="tag t-pend">Suspendido</span></td></tr>
+    </tbody></table>
+  </div>`,
+
+calidad:()=>`
+  <div class="page-title">Panel de calidad — Requisitos no funcionales</div>
+  <div class="page-sub">Evidencia de cumplimiento ISO/IEC 25010 implementada en el prototipo</div>
+  <div class="grid quality-grid">
+    <div class="q-card"><div class="qt">🔒 Seguridad</div><div class="qm">OAuth2 + mTLS + login por roles</div><div class="score">0 accesos no autoriz.</div></div>
+    <div class="q-card"><div class="qt">⚡ Rendimiento</div><div class="qm">Caché Redis + Load Balancer</div><div class="score">&lt; 3 s</div></div>
+    <div class="q-card"><div class="qt">👁 Usabilidad</div><div class="qm">Validación en tiempo real</div><div class="score">SUS &gt; 70</div></div>
+    <div class="q-card"><div class="qt">🔁 Fiabilidad</div><div class="qm">Arquitectura redundante</div><div class="score">99,5% uptime</div></div>
+    <div class="q-card"><div class="qt">🧩 Compatibilidad</div><div class="qm">REST/JSON + SOAP/XML</div><div class="score">4 sistemas</div></div>
+    <div class="q-card"><div class="qt">🌐 Portabilidad</div><div class="qm">Web responsiva multinavegador</div><div class="score">3+ browsers</div></div>
+    <div class="q-card"><div class="qt">🛠 Mantenibilidad</div><div class="qm">Arquitectura modular 4 capas + Git</div><div class="score">MTTR &lt; 4 h</div></div>
+    <div class="q-card"><div class="qt">✓ Funcionalidad</div><div class="qm">RF01–RF06 cubiertos</div><div class="score">100% RF</div></div>
+  </div>`,
+};
+
+/* ===================== LÓGICA / VALIDACIONES ===================== */
+function tagFor(e){return e==='Aprobado'?'t-ok':e==='Pendiente'?'t-pend':e==='Rechazado'?'t-rej':'t-proc';}
+
+function renderMenores(){
+  document.getElementById('m-tbody').innerHTML=DB.menores.map(m=>
+    `<tr><td>${m.id}</td><td>${m.menor}</td><td>${m.destino}</td><td><span class="tag ${tagFor(m.estado)}">${m.estado}</span></td></tr>`).join('');
+  document.getElementById('m-count').textContent=DB.menores.length;
+}
+// Validación de RUT chileno (módulo 11)
+function rutValido(rut){
+  rut=rut.replace(/\./g,'').replace('-','').toUpperCase();
+  if(rut.length<8)return false;
+  const cuerpo=rut.slice(0,-1), dv=rut.slice(-1);
+  if(!/^\d+$/.test(cuerpo))return false;
+  let suma=0,mul=2;
+  for(let i=cuerpo.length-1;i>=0;i--){suma+=parseInt(cuerpo[i])*mul;mul=mul===7?2:mul+1;}
+  const res=11-(suma%11);
+  const dvCalc=res===11?'0':res===10?'K':String(res);
+  return dv===dvCalc;
+}
+function bindMenorForm(){
+  renderMenores();
+  const rut=document.getElementById('m-rut');
+  rut.addEventListener('input',()=>{
+    const ok=rutValido(rut.value);
+    rut.classList.toggle('invalid',rut.value.length>0&&!ok);
+    rut.classList.toggle('valid',ok);
+    document.getElementById('e-m-rut').style.display=(rut.value.length>0&&!ok)?'block':'none';
+  });
+}
+function saveMenor(){
+  const f={nombre:'m-nombre',tutor:'m-tutor',destino:'m-destino'};let ok=true;
+  for(const k in f){const el=document.getElementById(f[k]);const v=el.value.trim();
+    el.classList.toggle('invalid',!v);document.getElementById('e-'+f[k]).style.display=v?'none':'block';if(!v)ok=false;}
+  const rut=document.getElementById('m-rut');
+  if(!rutValido(rut.value)){rut.classList.add('invalid');document.getElementById('e-m-rut').style.display='block';ok=false;}
+  if(!ok){toast('Revise los campos marcados','bad');return;}
+  const id='AM-'+(1045+DB.menores.length+1);
+  DB.menores.unshift({id,menor:document.getElementById('m-nombre').value,rut:rut.value,
+    tutor:document.getElementById('m-tutor').value,destino:document.getElementById('m-destino').value,estado:'Pendiente'});
+  toast('Autorización registrada · '+id,'ok');go('menores');
+}
+
+function renderVeh(){
+  document.getElementById('v-tbody').innerHTML=DB.vehiculos.map(v=>
+    `<tr><td>${v.patente}</td><td>${v.tipo}</td><td>${v.cond}</td><td><span class="tag ${tagFor(v.estado)}">${v.estado}</span></td></tr>`).join('');
+  document.getElementById('v-count').textContent=DB.vehiculos.length;
+}
+function patenteValida(p){return /^[A-Z]{2}[A-Z]{2}-\d{2}$/.test(p)||/^[A-Z]{2}-\d{4}$/.test(p);}
+function bindVehForm(){
+  renderVeh();
+  const pat=document.getElementById('v-pat');
+  pat.addEventListener('input',()=>{pat.value=pat.value.toUpperCase();
+    const ok=patenteValida(pat.value);
+    pat.classList.toggle('invalid',pat.value.length>0&&!ok);pat.classList.toggle('valid',ok);
+    document.getElementById('e-v-pat').style.display=(pat.value.length>0&&!ok)?'block':'none';});
+}
+function saveVeh(){
+  let ok=true;
+  const pat=document.getElementById('v-pat');
+  if(!patenteValida(pat.value)){pat.classList.add('invalid');document.getElementById('e-v-pat').style.display='block';ok=false;}
+  const cond=document.getElementById('v-cond');
+  if(!cond.value.trim()){cond.classList.add('invalid');document.getElementById('e-v-cond').style.display='block';ok=false;}
+  const vence=document.getElementById('v-vence');
+  if(!vence.value){vence.classList.add('invalid');document.getElementById('e-v-vence').style.display='block';ok=false;}
+  if(!ok){toast('Revise los campos marcados','bad');return;}
+  // Regla de negocio: el permiso no puede vencer en el pasado.
+  if(vence.value < new Date().toISOString().slice(0,10)){
+    vence.classList.add('invalid');toast('Regla de negocio: la fecha de vencimiento no puede ser pasada','bad');return;}
+  DB.vehiculos.unshift({id:'VM-'+(3303+DB.vehiculos.length+1),patente:pat.value,
+    tipo:document.getElementById('v-tipo').value,cond:cond.value,vence:vence.value,estado:'En proceso'});
+  toast('Admisión registrada','ok');go('vehiculos');
+}
+
+function renderControl(rows){
+  document.getElementById('c-tbody').innerHTML=rows.map(c=>
+    `<tr><td>${c.id}</td><td><b>${c.tipo}</b></td><td>${c.sujeto}</td><td>${c.resultado}</td><td><span class="tag ${tagFor(c.estado)}">${c.estado}</span></td></tr>`).join('')
+    ||'<tr><td colspan="5" style="text-align:center;color:var(--gris);padding:24px">Sin resultados para su búsqueda</td></tr>';
+}
+function filterControl(){
+  const q=document.getElementById('c-search').value.toLowerCase();
+  const t=document.getElementById('c-filter').value;
+  renderControl(DB.controles.filter(c=>
+    (!t||c.tipo===t)&&(c.id+c.sujeto+c.resultado).toLowerCase().includes(q)));
+}
+
+// Valida el documento: acepta un RUT chileno válido O un pasaporte (alfanumérico,
+// 6 a 12 caracteres, con al menos una letra y un dígito). Rechaza texto como "pene".
+function docValido(v){
+  v=(v||'').trim();
+  if(rutValido(v))return true;                       // ¿es un RUT válido?
+  const pas=v.toUpperCase();
+  return /^[A-Z0-9]{6,12}$/.test(pas) && /[A-Z]/.test(pas) && /[0-9]/.test(pas); // ¿pasaporte?
+}
+function hoyISO(){ return new Date().toISOString().split('T')[0]; }   // fecha de hoy AAAA-MM-DD
+
+function bindPreForm(){
+  // Bloquea fechas pasadas: el calendario no deja elegir antes de hoy.
+  const fecha=document.getElementById('p-fecha');
+  fecha.min=hoyISO();
+  fecha.addEventListener('input',()=>{
+    const mal = fecha.value && fecha.value < hoyISO();
+    fecha.classList.toggle('invalid',mal);
+    document.getElementById('e-p-fecha').style.display=mal?'block':'none';
+  });
+  // Valida el documento en tiempo real (RUT o pasaporte).
+  const doc=document.getElementById('p-doc');
+  doc.addEventListener('input',()=>{
+    const ok=docValido(doc.value);
+    doc.classList.toggle('invalid',doc.value.length>0&&!ok);
+    doc.classList.toggle('valid',ok);
+    document.getElementById('e-p-doc').style.display=(doc.value.length>0&&!ok)?'block':'none';
+  });
+}
+function emailValido(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);}
+function savePre(){
+  let ok=true;
+  // Nombre obligatorio
+  const nombre=document.getElementById('p-nombre');
+  if(!nombre.value.trim()){nombre.classList.add('invalid');document.getElementById('e-p-nombre').style.display='block';ok=false;}
+  // Documento: RUT válido o pasaporte (rechaza texto inválido)
+  const doc=document.getElementById('p-doc');
+  if(!docValido(doc.value)){doc.classList.add('invalid');document.getElementById('e-p-doc').style.display='block';ok=false;}
+  // Fecha: obligatoria y no anterior a hoy
+  const fecha=document.getElementById('p-fecha');
+  if(!fecha.value || fecha.value < hoyISO()){fecha.classList.add('invalid');document.getElementById('e-p-fecha').style.display='block';ok=false;}
+  const email=document.getElementById('p-email');
+  if(!emailValido(email.value)){email.classList.add('invalid');document.getElementById('e-p-email').style.display='block';ok=false;}
+  const ac=parseInt(document.getElementById('p-acomp').value);
+  if(isNaN(ac)||ac<0||ac>10){document.getElementById('p-acomp').classList.add('invalid');document.getElementById('e-p-acomp').style.display='block';ok=false;}
+  const sat=parseInt(document.getElementById('p-sat').value);
+  if(isNaN(sat)||sat<1||sat>5){document.getElementById('p-sat').classList.add('invalid');document.getElementById('e-p-sat').style.display='block';ok=false;}
+  if(!ok){toast('Revise los campos marcados','bad');return;}
+  const carril='C-'+(Math.floor(Math.random()*8)+1);
+  const turno='T'+(Math.floor(Math.random()*900)+100);
+  document.getElementById('p-result').innerHTML=
+    `<div class="card" style="margin-top:16px;background:var(--celeste);border-color:var(--azul-claro)">
+      <h3 style="color:var(--azul)">✓ Declaración recibida</h3>
+      <p class="desc" style="margin:8px 0 0">Turno asignado <b>${turno}</b> · Carril <b>${carril}</b>.
+      Preséntese con su documento. Tiempo estimado de atención: <b>9 min</b>.</p></div>`;
+  toast('Pre-atención enviada · turno '+turno,'ok');
+}
+
+function drawBars(){
+  const data=[['Doc. menores',82],['Vehículos',64],['Control PDI/SAG',91],['Pre-atención',61],['Reportes',38]];
+  document.getElementById('bars').innerHTML=data.map(([n,p])=>
+    `<div class="bar-row"><div class="name">${n}</div><div class="bar-track"><div class="bar-fill" style="width:0%" data-w="${p}"></div></div><div class="pct">${p}%</div></div>`).join('');
+  setTimeout(()=>document.querySelectorAll('.bar-fill').forEach(b=>b.style.width=b.dataset.w+'%'),60);
+}
+
+/* ===================== UI HELPERS ===================== */
+let toastT;
+function toast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.className='toast show '+type;t.textContent=msg;
+  clearTimeout(toastT);toastT=setTimeout(()=>t.className='toast '+type,2600);
+}
+// Enter para login
+document.getElementById('lg-pass').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+</script>
+</body>
+</html>
